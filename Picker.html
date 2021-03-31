@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <?!= include('Stylesheet'); ?>
+</head>
+<body>
+  <h2>Enviar PDF's</h2>
+  <p>
+    Permite enviar o processo digitalizado para a <a href="https://drive.google.com/drive/folders/1RQsXK_il_WYrR0eOuHwO1c5wdmvCVe6r" target="_blank">pasta do Google Drive</a>.
+  </p>
+  
+  <div class="section1">
+    <label for="nbsList">Escolha número do benefício </label><br>
+    <select id="nbsList">
+      <option>Loading...</option>
+    </select>
+  </div>
+  <div>
+    <button id="pick-file" disabled>Enviar arquivo</button>    
+  </div>
+  <p class="current" id="mensagens"></p>
+  <hr>
+  <h2>Envios:</h2>
+  <div>
+    <ul id='result'>
+    </ul>
+  </div>
+  
+  <?!= include('JavaScript'); ?>
+</body>
+
+
+</html>
