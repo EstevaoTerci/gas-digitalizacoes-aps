@@ -1,0 +1,77 @@
+<!-- Load the jQuery and jQuery UI libraries. -->
+<script src="https://code.jquery.com/jquery-1.8.3.min.js"></script>
+<script src="https://code.jquery.com/ui/1.10.0/jquery-ui.min.js"></script>
+<script>
+    $(function() {
+        $('#caixas-list').bind('change', onChangeCaixaSelected);
+        $('#submit-caixa').bind('click', submit);
+        loadSheetData()
+    });
+
+    /**
+     * Variaveis globais
+     * */
+    let pickerApiLoaded = false;
+    let caixas = null
+    let caixaSelected = null
+
+    function loadSheetData(){
+      google.script.run
+        .withSuccessHandler(showCaixasList)
+        .withFailureHandler(showMensagens)
+        .getCaixas();
+    }
+
+    function onChangeCaixaSelected(){
+      caixaSelected = $('#caixas-list').val()
+      if(!caixaSelected){
+        $('#submit-caixa').prop('disabled', true)
+        showMensagens("Escolha uma caixa")
+      } else {
+        $('#submit-caixa').prop('disabled', false)
+        showMensagens("")
+        google.script.run
+            .withSuccessHandler(showBeneficiosPorCaixa)
+            .withFailureHandler(showMensagens)
+            .getBeneficiosPorCaixas(caixaSelected)
+      }
+    }
+
+    /**
+     * Exibe a lista de caixas no select
+     * @param {Array} Lista de Nbs sem arquivo atribuído
+     */
+    function showCaixasList(sheetData) {
+      caixas = ['', ...sheetData]
+      let select = $('#caixas-list');
+      select.empty();
+      caixas.forEach((caixa) => {
+        let option = $('<option>')
+          .attr('value', caixa)
+          .text(` ${caixa}` );
+        select.append(option);
+      });
+    }
+
+    function showBeneficiosPorCaixa(rowsData){
+        $('#result').empty()
+        const total = (rowsData)?.length
+        $('#total').html(`No total são <b>${total}</b> benefícios nesta caixa`)
+        for(rowData of rowsData){
+            let urlFile = rowData?.Arquivo
+            let nb = rowData?.Especie + ' / ' + rowData?.Numero 
+            let html = `<li><a href="${urlFile}" target="_blank">${nb}</a></li>`
+            $('#result').append(html)
+        }
+    }
+
+    function showMensagens(message) {
+      $('#mensagens').text(message)
+    }
+
+    function submit(){
+        console.log('Submited')
+        google.script.run.getQrCode(caixaSelected)
+    }
+    
+  </script>

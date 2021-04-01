@@ -6,16 +6,16 @@
  * JavaScript code for the Google Picker API.
  */
 function showPicker() {
-  
-  Logger.log(filtraNbsSemArquivos())
+  Logger.log('Running showPicker')
   let html = HtmlService.createTemplateFromFile('Picker.html')
-  html.data = sheetDataObject()
-  let htmlOutput = html.evaluate().setTitle('Enviar dossiê digitalizado').setSandboxMode(HtmlService.SandboxMode.IFRAME);
+  let htmlOutput = html.evaluate().setTitle('Enviar PDFs').setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showSidebar(htmlOutput);
 }
 
-
-const filtraNbsSemArquivos = () => {
+/**
+ * @description Filtra os NBs a serem exibidos na select
+ */
+const filtraNbsSemArquivos = (): RowData[] => {
   const sheetData = sheetDataObject()
   const headerFiltrar = 'Arquivo'
   const headerFiltrar2 = 'Numero'
@@ -30,10 +30,11 @@ const filtraNbsSemArquivos = () => {
  * 
  * @returns {Object} {rowNum: number, ...headers: rowData}
  */
-const sheetDataObject = () => {
-  const sheetData = SpreadsheetApp.getActiveSpreadsheet().getDataRange().getValues()
+const sheetDataObject = (): RowData[] => {
+  const sheetData = SpreadsheetApp.getActiveSpreadsheet()
+    .getSheetByName('Processos').getDataRange().getValues()
   const headers = sheetData.shift()
-  const sheetEntries = sheetData.map((arrLinha, i) => {
+  const sheetEntries = <RowData[]>sheetData.map((arrLinha, i) => {
     let rowObject = {}
     rowObject['rowNum'] = i + 2
     for(let header of headers){
@@ -42,7 +43,7 @@ const sheetDataObject = () => {
     }
     return Object.assign({}, rowObject)
   })
-  return sheetEntries
+  return <RowData[]>sheetEntries
 }
 
 /**
@@ -63,7 +64,7 @@ function getOAuthToken() {
 function onEnvioBemSucedido({id, rowNum}){
   //daqui para frene pegar oid ou url e prosseguir
   Logger.log(id);
-  const rowData = sheetDataObject().filter(a => a['rowNum'] === +rowNum )[0]
+  const rowData: RowData = sheetDataObject().filter(a => a['rowNum'] === +rowNum )[0]
   const fileName = `${rowData['Numero']} ${rowData['Nome']}`
   const fileUrl = DriveApp.getFileById(id).setName(fileName).getUrl()
   rowData['Arquivo'] = fileUrl
@@ -75,9 +76,37 @@ function onEnvioBemSucedido({id, rowNum}){
   return fileName
 }
 
-function setFileUrlToSheet(){}
-
-function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename)
-      .getContent();
+function highligthRow(rowNum: number){
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Processos')
+  const row = sheet.getRange(rowNum, 1, 1, sheet.getLastColumn())
+  row.setBackground('#76D7C4')
 }
+
+function unHighligthRow(rowNum: number){
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Processos')
+  const row = sheet.getRange(rowNum, 1, 1, sheet.getLastColumn())
+  row.setBackground('white')
+}
+
+function include(filename: string) {
+  return HtmlService.createHtmlOutputFromFile(filename)
+    .getContent();
+}
+
+
+interface RowData {
+  rowNum: number
+  Numero: string
+  Especie: string
+  Tipo: string
+  Caixa: string
+  Nome: string
+  CPF: string
+  Origem: string
+  Demanda: string
+  Status_Digitalizacao: string
+  Data_Digitalizacao: string
+  Arquivo: string
+}
+
+
