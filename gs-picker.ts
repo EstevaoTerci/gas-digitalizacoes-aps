@@ -6,7 +6,9 @@
  * JavaScript code for the Google Picker API.
  */
 function showPicker() {
-  Logger.log('Running showPicker')
+  Logger.log('Running showPicker...')
+  const sheetProcessos = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Processos')
+  sheetProcessos.activate()
   let html = HtmlService.createTemplateFromFile('Picker.html')
   let htmlOutput = html.evaluate().setTitle('Enviar PDFs').setSandboxMode(HtmlService.SandboxMode.IFRAME);
   SpreadsheetApp.getUi().showSidebar(htmlOutput);
@@ -15,7 +17,8 @@ function showPicker() {
 /**
  * @description Filtra os NBs a serem exibidos na select
  */
-const filtraNbsSemArquivos = (): RowData[] => {
+const filtraNbsSemArquivos = (): string  => {
+  Logger.log('Running filtraNbsSemArquivos...')
   const sheetData = sheetDataObject()
   const headerFiltrar = 'Arquivo'
   const headerFiltrar2 = 'Numero'
@@ -23,7 +26,7 @@ const filtraNbsSemArquivos = (): RowData[] => {
     return (a[headerFiltrar] === '' || a[headerFiltrar] === null || a[headerFiltrar] === undefined) &&
             !(a[headerFiltrar2] === '' || a[headerFiltrar2] === null || a[headerFiltrar2] === undefined)
   })
-  return filteredData
+  return JSON.stringify(<RowData[]>filteredData)
 }
 
 /**
@@ -31,6 +34,7 @@ const filtraNbsSemArquivos = (): RowData[] => {
  * @returns {Object} {rowNum: number, ...headers: rowData}
  */
 const sheetDataObject = (): RowData[] => {
+  Logger.log('Running sheetDataObject...')
   const sheetData = SpreadsheetApp.getActiveSpreadsheet()
     .getSheetByName('Processos').getDataRange().getValues()
   const headers = sheetData.shift()
@@ -57,13 +61,18 @@ const sheetDataObject = (): RowData[] => {
  * @return {string} The user's OAuth 2.0 access token.
  */
 function getOAuthToken() {
+  Logger.log('Running getOAuthToken...')
   DriveApp.getRootFolder();
   return ScriptApp.getOAuthToken();
 }
 
+function getDeveloperKey(){
+  Logger.log('Running getDeveloperKey...')
+  return PropertiesService.getScriptProperties().getProperty('API_KEY')
+}
+
 function onEnvioBemSucedido({id, rowNum}){
-  //daqui para frene pegar oid ou url e prosseguir
-  Logger.log(id);
+  Logger.log('Running onEnvioBemSucedido...')
   const rowData: RowData = sheetDataObject().filter(a => a['rowNum'] === +rowNum )[0]
   const fileName = `${rowData['Numero']} ${rowData['Nome']}`
   const fileUrl = DriveApp.getFileById(id).setName(fileName).getUrl()
@@ -72,23 +81,28 @@ function onEnvioBemSucedido({id, rowNum}){
   const headers = sheet.getDataRange().getValues().shift()
   const headerCol = headers.indexOf('Arquivo') + 1
   sheet.getRange(rowNum, headerCol).setValue(fileUrl)
-  Logger.log(fileName)
-  return fileName
+  return JSON.stringify(fileName)
 }
 
 function highligthRow(rowNum: number){
+  Logger.log('Running highligthRow...')
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Processos')
   const row = sheet.getRange(rowNum, 1, 1, sheet.getLastColumn())
   row.setBackground('#76D7C4')
+  row.activate()  
+  return unHighligthRow(rowNum)
 }
 
 function unHighligthRow(rowNum: number){
+  Logger.log('Running unHighligthRow...')
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Processos')
   const row = sheet.getRange(rowNum, 1, 1, sheet.getLastColumn())
+  Utilities.sleep(10000)
   row.setBackground('white')
 }
 
 function include(filename: string) {
+  Logger.log('Running include...')
   return HtmlService.createHtmlOutputFromFile(filename)
     .getContent();
 }

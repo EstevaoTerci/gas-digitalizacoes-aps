@@ -11,7 +11,6 @@
     /**
      * Variaveis globais
      * */
-    let pickerApiLoaded = false;
     let caixas = null
     let caixaSelected = null
 
@@ -41,9 +40,10 @@
      * Exibe a lista de caixas no select
      * @param {Array} Lista de Nbs sem arquivo atribuído
      */
-    function showCaixasList(sheetData) {
+    function showCaixasList(data) {
+      const sheetData = JSON.parse(data)
       caixas = ['', ...sheetData]
-      let select = $('#caixas-list');
+      const select = $('#caixas-list');
       select.empty();
       caixas.forEach((caixa) => {
         let option = $('<option>')
@@ -53,7 +53,8 @@
       });
     }
 
-    function showBeneficiosPorCaixa(rowsData){
+    function showBeneficiosPorCaixa(data){
+        const rowsData = JSON.parse(data)
         $('#result').empty()
         const total = (rowsData)?.length
         $('#total').html(`No total são <b>${total}</b> benefícios nesta caixa`)
@@ -70,8 +71,15 @@
     }
 
     function submit(){
-        console.log('Submited')
-        google.script.run.getQrCode(caixaSelected)
+      google.script.run
+        .withSuccessHandler(onSuccessSubmit)
+        .withFailureHandler(showMensagens)
+        .geraEtiqueta(caixaSelected)
+    }
+
+    function onSuccessSubmit(){
+      showMensagens('A etiqueta foi gerada com sucesso. Para imprimir, presseione Ctrl + P e na caixa de impressão escolha Células Selecionadas.')
+      google.script.host.editor.focus()
     }
     
   </script>

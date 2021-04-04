@@ -5,20 +5,28 @@
     $(function() {
         $('#nbsList').bind('change', onChangeNbSelected);
         $('#pick-file').bind('click', getOAuthToken);
-        
+        google.script.run
+          .withSuccessHandler(setDeveloperKey)
+          .getDeveloperKey()
     });
 
     /**
      * Variaveis globais
      * */
+    let DEVELOPER_KEY = null
     let pickerApiLoaded = false;
     let nbsList = null
     let rowNum = null
 
+    function setDeveloperKey(key){
+      DEVELOPER_KEY = key
+    }
+
     function loadSheetData(){
       google.script.run
         .withSuccessHandler(showNbsList)
-        .withFailureHandler(showMensagens).filtraNbsSemArquivos();
+        .withFailureHandler(showMensagens)
+        .filtraNbsSemArquivos();
     }
 
     function onChangeNbSelected(){
@@ -34,26 +42,54 @@
     }
 
     /**
+     * Determina se a select deve ser preenchida ou não
+    */
+    function showNbsList(sheetData) {
+      nbsList = JSON.parse(sheetData)      
+      if(nbsList?.length > 0){
+        fillSelect(nbsList)
+        showMensagens('')
+      } else {
+        emptySelect()
+      }
+    }
+
+    /**
      * Exibe a lista de Nbs no select
      * @param {Array.<Object>} Lista de Nbs sem arquivo atribuído
      */
-    function showNbsList(sheetData) {
-      nbsList = sheetData  
-      let select = $('#nbsList');
+    function fillSelect(nbs){
+      if(nbsList?.length === 0){
+        return emptySelect()
+      }
+      const select = $('#nbsList');
       select.empty();
-      nbsList.forEach((nb) => {
-        let option = $('<option>')
+      select.prop('disabled', false)
+      nbs.forEach((nb) => {
+        const option = $('<option>')
           .attr('value', nb.rowNum)
-          .text(` ${nb?.Numero} - ${nb?.Nome}` );
+          .text(` ${nb?.Numero} - ${nb?.Nome.slice(0,30)}` );
         select.append(option);
       });
+      select.prepend($('<option selected>'))
     }
+
+    /**
+     * Quando não há benefícios a serem listados na select
+    */
+   function emptySelect(){
+    const select = $('#nbsList');
+        select.empty();
+        select.prop('disabled', true)
+        const option = $('<option>')
+          .attr('value', null)
+          .text('Sem Nbs Pendentes')
+        select.append(option);
+        showMensagens('Não existem benefícios pendentes de envio!')
+   }
 
     function highligthRow(rowNum){
       google.script.run.highligthRow(rowNum)
-      setTimeout(() => {
-        google.script.run.unHighligthRow(rowNum)
-      }, 10000)      
     }
 
     /**
@@ -95,20 +131,20 @@
     function createPicker(token) {
       if (pickerApiLoaded && token) {
         let picker = new google.picker.PickerBuilder()
-          // Instruct Picker to display only spreadsheets in Drive. For other
-          // views, see https://developers.google.com/picker/docs/#otherviews
-          //.addView(google.picker.ViewId.DRAWINGS)
-          .addView(new google.picker.DocsUploadView().setParent('1RQsXK_il_WYrR0eOuHwO1c5wdmvCVe6r')) //Pasta INSS > Digitalizações
-          // Hide the navigation panel so that Picker fills more of the dialog.
-          .enableFeature(google.picker.Feature.NAV_HIDDEN)
-          // Hide the title bar since an Apps Script dialog already has a title.
-          .hideTitleBar()
-          .setOAuthToken(token)
-          .setCallback(pickerCallback)
-          .setOrigin(google.script.host.origin)
-          // Instruct Picker to fill the dialog, minus 2 pixels for the border.
-          .setSize(290, 390)
-          .build();
+        // Instruct Picker to display only spreadsheets in Drive. For other
+        // views, see https://developers.google.com/picker/docs/#otherviews
+        //.addView(google.picker.ViewId.DRAWINGS)
+        .addView(new google.picker.DocsUploadView().setParent('1RQsXK_il_WYrR0eOuHwO1c5wdmvCVe6r')) //Pasta INSS > Digitalizações
+        // Hide the navigation panel so that Picker fills more of the dialog.
+        .enableFeature(google.picker.Feature.NAV_HIDDEN)
+        // Hide the title bar since an Apps Script dialog already has a title.
+        .hideTitleBar()
+        .setOAuthToken(token)
+        .setCallback(pickerCallback)
+        .setOrigin(google.script.host.origin)
+        // Instruct Picker to fill the dialog, minus 2 pixels for the border.
+        .setSize(290, 390)
+        .build();
         picker.setVisible(true);
       } else {
         showMensagens('Houve um erro ao carregar o arquivo.');
@@ -130,12 +166,22 @@
         let url = doc[google.picker.Document.URL];
         let title = doc[google.picker.Document.NAME];    
         google.script.run
-          .withSuccessHandler(showSuccess(url, title, id))
+          .withSuccessHandler(afterEnvio(url, title))
           .withFailureHandler(showMensagens)
           .onEnvioBemSucedido({id, rowNum});
       } else if (action == google.picker.Action.CANCEL) {
         pickerCancelado()
       }
+    }
+
+    function afterEnvio(url, title){
+      showListaEnviados(url, title)
+      const select = $('#nbsList');
+      select.empty();
+      const indexEnviado = nbsList.findIndex(a => +a.rowNum === +rowNum)
+      console.log(indexEnviado)
+      nbsList.splice(indexEnviado, 1)
+      fillSelect(nbsList)
     }
 
     function pickerCancelado(){
@@ -145,8 +191,8 @@
       showMensagens('Escolha o NB novamente')
     }
 
-    function showSuccess(urlFile, title, id){
-      const htmlSuccess = `<li>Arquivo <a href="${urlFile}" target="_blank">${title}</a> enviado!</li>`  
+    function showListaEnviados(urlFile, title, id){
+      const htmlSuccess = `<li><a href="${urlFile}" target="_blank">${title}</a> enviado!</li>`  
       $('#result').append(htmlSuccess)
     }
 

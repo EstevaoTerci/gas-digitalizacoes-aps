@@ -1,6 +1,6 @@
 function onOpen(){
   SpreadsheetApp.getUi()
-  .createMenu('Digitalizações APS BSF')
+  .createMenu('Arquivo APS BSF')
   .addItem('Ver processos cadastrados', 'showAwTable')
   .addSeparator()
   .addItem('Enviar Arquivo', 'showPicker')
