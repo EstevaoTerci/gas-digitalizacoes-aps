@@ -108,19 +108,5 @@ function include(filename: string) {
 }
 
 
-interface RowData {
-  rowNum: number
-  Numero: string
-  Especie: string
-  Tipo: string
-  Caixa: string
-  Nome: string
-  CPF: string
-  Origem: string
-  Demanda: string
-  Status_Digitalizacao: string
-  Data_Digitalizacao: string
-  Arquivo: string
-}
 
 

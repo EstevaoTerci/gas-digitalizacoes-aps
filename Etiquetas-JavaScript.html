@@ -15,6 +15,7 @@
     let caixaSelected = null
 
     function loadSheetData(){
+      showLoading()
       google.script.run
         .withSuccessHandler(showCaixasList)
         .withFailureHandler(showMensagens)
@@ -22,6 +23,7 @@
     }
 
     function onChangeCaixaSelected(){
+      showLoading()
       caixaSelected = $('#caixas-list').val()
       if(!caixaSelected){
         $('#submit-caixa').prop('disabled', true)
@@ -51,35 +53,61 @@
           .text(` ${caixa}` );
         select.append(option);
       });
+      hideLoading()
     }
 
     function showBeneficiosPorCaixa(data){
         const rowsData = JSON.parse(data)
         $('#result').empty()
         const total = (rowsData)?.length
-        $('#total').html(`No total são <b>${total}</b> benefícios nesta caixa`)
+        $('#total').html(`No total são <b>${total}</b> processos nesta caixa`)
         for(rowData of rowsData){
             let urlFile = rowData?.Arquivo
             let nb = rowData?.Especie + ' / ' + rowData?.Numero 
             let html = `<li><a href="${urlFile}" target="_blank">${nb}</a></li>`
             $('#result').append(html)
         }
+        hideLoading()
     }
 
     function showMensagens(message) {
       $('#mensagens').text(message)
     }
 
+    function disableInputs(){
+      $('#submit-caixa').prop('disabled', true)
+      $('#caixas-list').prop('disabled', true)
+    }
+ 
+    function enableInputs(){
+      $('#submit-caixa').prop('disabled', true)
+      $('#caixas-list').prop('disabled', true)
+    }
+
+    function showLoading(){
+      $('#loading-button').prop('hidden', false)
+    }
+    
+    function hideLoading(){
+      $('#loading-button').prop('hidden', true)
+    }
+
     function submit(){
+      showLoading()
+      disableInputs()
       google.script.run
         .withSuccessHandler(onSuccessSubmit)
         .withFailureHandler(showMensagens)
         .geraEtiqueta(caixaSelected)
     }
 
-    function onSuccessSubmit(){
-      showMensagens('A etiqueta foi gerada com sucesso. Para imprimir, presseione Ctrl + P e na caixa de impressão escolha Células Selecionadas.')
+    function onSuccessSubmit(url){
+      hideLoading()
+      showMensagens('A etiqueta foi gerada com sucesso e será exibida em outra janela')
+      const html = `<p><b>Clique para ver a etiqueta: </b><a href="${url}" target="_blank">Link</a></p>`
+      $('#mensagens').append(html)
       google.script.host.editor.focus()
+      window.open(url, '_blank')
     }
     
   </script>

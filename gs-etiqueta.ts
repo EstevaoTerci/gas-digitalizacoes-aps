@@ -18,6 +18,7 @@ function getCaixas(){
 function getBeneficiosPorCaixas(caixa: any){
     Logger.log('Running getBeneficiosPorCaixas...')
     const dadosBeneficios = sheetDataObject().filter(a => +a.Caixa === +caixa)
+        .map(rowData => normalizaNumeroProcesso(rowData))
     const sorted = dadosBeneficios.sort((a,b) => {
         let numA = String(a.Numero).replace(/[^\d]+/g,'')
         let numB = String(b.Numero).replace(/[^\d]+/g,'')
@@ -40,6 +41,7 @@ function geraEtiqueta(caixa: string){
     
     //Cria as stings da listagem de benefícios da caixa e dá classifica em ordem crescente de NBs
     const dadosBeneficios = sheetDataObject().filter(a => +a.Caixa === +caixa)
+            .map(rowData => normalizaNumeroProcesso(rowData))
     const sorted = dadosBeneficios.sort((a,b) => {
         let numA = String(a.Numero).replace(/[^\d]+/g,'')
         let numB = String(b.Numero).replace(/[^\d]+/g,'')
@@ -60,19 +62,24 @@ function geraEtiqueta(caixa: string){
 
     //Busca os demais dados da etiqueta
     const dadosEtiqueta = sheetDataObjectGenerica('Caixas').filter(a => +a['Caixa'] === +caixa)[0]
-    //Remove as imagens que já estejam na sheet e insere o novo qrCode
-    sheetEtiqueta.getImages().forEach(e => e.remove())
-    sheetEtiqueta.insertImage(qrCodeImage, 2, 6, 250, 0)
-    //Insere as listagens de benefícios nas colunas
-    sheetEtiqueta.getRange('B7').setValue(dadosColuna1)
-    sheetEtiqueta.getRange('D7').setValue(dadosColuna2)
-    //Insere os demais dados da etiqueta
-    sheetEtiqueta.getRange('B3').setValue(`Caixa \n ${dadosEtiqueta['Caixa']}`)
-    sheetEtiqueta.getRange('B4').setValue(`Assunto \n ${dadosEtiqueta['Assunto']}`)
-    sheetEtiqueta.getRange('B5').setValue(`Estante \n ${dadosEtiqueta['Estante']}`)
-    //Torna a sheet etiqueta visível e seleciona a área de impressão
-    sheetEtiqueta.activate()
-    sheetEtiqueta.setActiveSelection('B2:E12')
+
+    // Monta o payload da etiqueta
+    const paramsEtiqueta: Etiqueta = {
+        assunto: dadosEtiqueta['Assunto'],
+        caixaNum: dadosEtiqueta['Caixa'],
+        data: dataPadrao(),
+        estante: dadosEtiqueta['Estante'],
+        coluna1: dadosColuna1,
+        coluna2: dadosColuna2
+    }
+
+    // Cria o doc da etiqueta e retorna o url
+    const urlNovaEtiqueta = novaEtiqueta(paramsEtiqueta)
+
+    insereQrCode(urlNovaEtiqueta, qrCodeImage)
+
+    return urlNovaEtiqueta
+
 }
 
 
@@ -101,10 +108,52 @@ function separar(base, maximo) {
     return resultado;
   }
 
+  /**
+   * Insere o qrCode na respectiva célula da table
+   * @param urlDoc Url do google doc da etiqueta
+   * @param image Blob da imagem do qrCode
+   */
+  function insereQrCode(urlDoc: string, image: GoogleAppsScript.Base.Blob){
+      Logger.log('Running insereQrCode...')
+      
+      const tables = DocumentApp.openByUrl(urlDoc).getBody().getTables()
+      
+      let style = {}
+      style[DocumentApp.Attribute.HORIZONTAL_ALIGNMENT] = DocumentApp.HorizontalAlignment.CENTER;
+      
+      return tables[0].getRow(3).getCell(1).insertImage(1, image).getParent()
+        .setAttributes(style)
+  } 
+
+
+  /**
+   * 
+   * @param paramsEtiqueta Objeto contendo os dados da etiqueta
+   * @returns Url do google doc gerado
+   */
+  function novaEtiqueta(paramsEtiqueta: Etiqueta): string {
+    const docModeloId = '10LOtstqbFz10sQR9HD8uF1yorrdppjbZUhXPeMXNHco'
+    const folderEtiquetasId = '1ZOWW9tEEnulQnMFSo7HIgrB2UcIbYK_K'
+
+    const folderEtiquetasRef = DriveApp.getFolderById(folderEtiquetasId)
+    
+    const novoDocUrl = DriveApp.getFileById(docModeloId)
+        .makeCopy(`Caixa n. ${paramsEtiqueta.caixaNum}`, folderEtiquetasRef).getUrl();
+
+    const body = DocumentApp.openByUrl(novoDocUrl).getBody();
+
+    for (var key in paramsEtiqueta) {
+        body.replaceText(`<<${key}>>`, paramsEtiqueta[key]);
+    }
+
+    return novoDocUrl;
+}
 
 interface Etiqueta {
-    caixaNum: string
-    assunto: string
-    estante: string
-    data: string
+    caixaNum: string;
+    assunto: string;
+    estante: string;
+    data: string;
+    coluna1: string;
+    coluna2: string;
 }
